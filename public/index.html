@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Monitor Nacional de Lluvias</title>
+<meta name="description" content="Cuánto va a llover, cuánto ha llovido y dónde está lloviendo en cada cantón del Ecuador.">
+<style>
+/* Línea gráfica del Gobierno del Ecuador (Reporte Situacional SNGR): morado, amarillo y azul marino, Metropolis.
+   Composición: barra blanca con el logo; portada azul marino con la pregunta y tres cifras del país (las mismas tres
+   preguntas de la ficha); ficha del cantón; mapa y tabla del mismo alto. Una sola apariencia clara, a propósito. */
+@font-face { font-family: "Metropolis"; src: url("fuentes/Metropolis-Regular.otf") format("opentype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Metropolis"; src: url("fuentes/Metropolis-Bold.otf") format("opentype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Metropolis"; src: url("fuentes/Metropolis-ExtraBold.otf") format("opentype"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Metropolis"; src: url("fuentes/Metropolis-Black.otf") format("opentype"); font-weight: 900; font-display: swap; }
+:root {
+  --morado: #443f8a;
+  --amarillo: #fbb909;
+  --marino: #00296c;
+  --marino-d: #001a4d;
+  --real: #0043af;
+  --tinta: #0d1f45;
+  --tinta-2: #46506a;
+  --tinta-3: #6e7790;
+  --fondo: #f3f4f9;
+  --papel: #ffffff;
+  --linea: #dcdfeb;
+  --sin: #e4e7f0;
+  --l1: #9cc3f0; --l2: #4a8fdf; --l3: #1d5cab; --l4: #0c3264;
+  --rojo: #c8102e; --rojo-f: #fde7ea;
+  --ambar: #8a5d00; --ambar-f: #fff3d1;
+  --azul-f: #e5edfb;
+  --gris-f: #eceef4;
+  --f: "Metropolis", "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--fondo); color: var(--tinta); font: 400 16px/1.5 var(--f); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--amarillo); outline-offset: 2px; }
+.envoltura { max-width: 1200px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.icono { width: 1.1em; height: 1.1em; flex: none; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- barra institucional */
+.institucional { background: var(--papel); border-bottom: 1px solid var(--linea); }
+.institucional .envoltura { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 10px; }
+.institucional img { height: 46px; width: auto; display: block; }
+.institucional .act { font-size: 13px; color: var(--tinta-3); text-align: right; }
+.institucional .act b { color: var(--tinta); }
+
+/* ---------- portada */
+.portada { position: relative; overflow: hidden; background: var(--marino); color: #fff; }
+.portada::after { /* cintas inclinadas, como en el Reporte Situacional */
+  content: ""; position: absolute; right: -40px; bottom: 26px; width: 340px; height: 18px; background: var(--amarillo);
+  transform: skewX(-24deg); box-shadow: -60px 26px 0 0 var(--morado); }
+.portada .envoltura { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; padding-block: 44px 64px; align-items: center; }
+.cinta { display: inline-block; background: var(--morado); color: #fff; font-weight: 800; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; padding: 6px 14px; transform: skewX(-14deg); }
+.cinta span { display: inline-block; transform: skewX(14deg); }
+.portada h1 { font-weight: 900; font-size: clamp(36px, 5.4vw, 62px); line-height: 1; letter-spacing: -.01em; margin: 16px 0 26px; text-wrap: balance; }
+.portada h1 em { font-style: normal; color: var(--amarillo); }
+.portada .lead { color: #c9d4ec; font-size: 17px; margin: 0 0 24px; max-width: 46ch; }
+.busqueda { position: relative; max-width: 540px; }
+.campo { display: flex; align-items: center; gap: 10px; background: #fff; color: var(--tinta); border-radius: 8px; padding: 0 6px 0 14px; }
+.campo svg { color: var(--tinta-3); }
+.campo input { flex: 1; min-width: 0; border: 0; background: none; padding: 15px 0; outline: none; font-size: 16px; }
+.campo input::placeholder { color: var(--tinta-3); }
+.campo button { border: 0; border-radius: 6px; background: var(--amarillo); color: var(--tinta); font-weight: 800; padding: 10px 16px; cursor: pointer; }
+.ubicar { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; color: #fff; cursor: pointer; padding: 4px 0; font-weight: 700; font-size: 15px; }
+.ubicar:hover { color: var(--amarillo); }
+.sugerencias { position: absolute; z-index: 5; left: 0; right: 0; top: 56px; list-style: none; margin: 0; padding: 4px; background: #fff; color: var(--tinta);
+  border-radius: 8px; box-shadow: 0 14px 34px rgba(0,20,60,.35); }
+.sugerencias li { padding: 10px 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+.sugerencias li:hover, .sugerencias li.activa { background: var(--fondo); }
+.sugerencias small { color: var(--tinta-3); }
+.mensaje { color: var(--amarillo); font-size: 14px; min-height: 1.2em; margin-top: 6px; }
+.pais-t { font-weight: 800; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #c9d4ec; margin: 0 0 12px; }
+.cifras { display: grid; gap: 10px; }
+.cifra { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 16px; background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.14); border-radius: 10px; padding: 12px 16px; cursor: pointer; text-align: left; color: #fff; width: 100%; }
+.cifra:hover { background: rgba(255,255,255,.12); }
+.cifra .v { font-weight: 900; font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
+.cifra .t { font-size: 15px; line-height: 1.3; }
+.cifra .t b { display: block; font-weight: 800; font-size: 17px; }
+.cifra .t span { color: #c9d4ec; font-size: 13px; }
+.cifra .flecha { color: var(--amarillo); font-weight: 800; }
+
+/* ---------- ficha del cantón */
+.ficha { margin-top: 28px; background: var(--papel); border-radius: 12px; box-shadow: 0 1px 0 var(--linea), 0 10px 30px rgba(13,31,69,.06); overflow: hidden; scroll-margin-top: 12px; }
+.ficha-cab { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 20px; padding: 20px 24px; border-bottom: 1px solid var(--linea); }
+.ficha-cab .prov { font-size: 14px; color: var(--tinta-3); font-weight: 700; }
+.ficha-cab h2 { font-weight: 900; font-size: clamp(28px, 4vw, 40px); line-height: 1.05; margin: 2px 0 0; color: var(--morado); }
+.botones { display: flex; gap: 8px; flex-wrap: wrap; }
+.boton { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--linea); background: var(--papel); border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--tinta-2); }
+.boton:hover { border-color: var(--morado); color: var(--morado); }
+.respuestas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.resp { padding: 20px 24px 22px; display: grid; gap: 8px; align-content: start; }
+.resp + .resp { border-left: 1px solid var(--linea); }
+.resp .q { font-weight: 800; font-size: 16px; color: var(--tinta-2); }
+.resp .v { font-weight: 900; font-size: 48px; line-height: 1; font-variant-numeric: tabular-nums; }
+.resp .v small { font-weight: 700; font-size: 18px; color: var(--tinta-2); }
+.resp .v.texto { font-size: 32px; }
+.estado { justify-self: start; display: inline-flex; align-items: center; gap: 7px; border-radius: 4px; padding: 4px 10px; font-weight: 800; font-size: 13px; }
+.estado i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.resp .d { font-size: 13px; color: var(--tinta-3); }
+.cuando { padding: 4px 24px 22px; }
+.cuando-t { font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-3); margin: 0 0 10px; }
+.periodos { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; align-items: end; }
+.periodo { display: grid; gap: 6px; text-align: center; }
+.periodo .col { height: 64px; display: flex; align-items: flex-end; justify-content: center; }
+.periodo .col i { display: block; width: 70%; max-width: 46px; border-radius: 4px 4px 0 0; background: var(--l2); min-height: 2px; }
+.periodo .mm { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+.periodo .n { font-size: 12px; color: var(--tinta-3); line-height: 1.2; }
+.periodo.fuerte .col i { background: var(--rojo); }
+.periodo.moderada .col i { background: #d79a00; }
+details.hora { border-top: 1px solid var(--linea); padding: 12px 24px 18px; }
+details.hora summary { cursor: pointer; font-weight: 800; color: var(--real); font-size: 14px; }
+#grafico { width: 100%; height: auto; display: block; margin-top: 10px; }
+#grafico text { fill: var(--tinta-3); font: 11px var(--f); }
+#grafico .eje { stroke: var(--linea); }
+#grafico .dia { stroke: var(--tinta-3); stroke-opacity: .5; stroke-dasharray: 2 4; }
+#grafico .b { fill: var(--l2); }
+#grafico .hit { fill: transparent; }
+
+/* ---------- mapa y tabla */
+.seccion-t { display: flex; justify-content: space-between; align-items: end; gap: 14px; flex-wrap: wrap; margin: 44px 0 14px; }
+.seccion-t h2 { font-weight: 900; font-size: clamp(24px, 3vw, 32px); line-height: 1.1; margin: 0; color: var(--morado); }
+.controles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.segmentos { display: inline-flex; flex-wrap: wrap; background: var(--papel); border: 1px solid var(--linea); border-radius: 8px; padding: 3px; gap: 2px; }
+.segmentos button { border: 0; background: none; color: var(--tinta-2); font-weight: 700; font-size: 14px; padding: 8px 13px; border-radius: 5px; cursor: pointer; }
+.segmentos button[aria-pressed="true"] { background: var(--morado); color: #fff; }
+select { background: var(--papel); border: 1px solid var(--linea); border-radius: 8px; padding: 9px 10px; font-size: 14px; font-weight: 700; }
+.panel { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); background: var(--papel); border-radius: 12px; box-shadow: 0 1px 0 var(--linea), 0 10px 30px rgba(13,31,69,.06); overflow: hidden; }
+.panel-mapa { padding: 18px 20px; border-right: 1px solid var(--linea); }
+.panel-tabla { position: relative; min-width: 0; }
+.tabla-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 0 20px 12px; }
+.fuente-p { color: var(--tinta-3); font-size: 13px; margin: 0 0 8px; }
+#mapa { width: 100%; height: auto; display: block; touch-action: manipulation; }
+#mapa path.c { stroke: #fff; stroke-opacity: .7; stroke-width: .5; cursor: pointer; transition: fill .25s; }
+#mapa path.c:hover { stroke: var(--tinta); stroke-opacity: 1; stroke-width: 1.2; }
+#mapa path.c.sel { stroke: var(--amarillo); stroke-opacity: 1; stroke-width: 3; }
+#mapa path.p { fill: none; stroke: #fff; stroke-width: 1.5; pointer-events: none; }
+#mapa .recuadro { fill: none; stroke: var(--linea); stroke-width: 1; stroke-dasharray: 3 3; }
+#mapa .recuadro-t { fill: var(--tinta-3); font: 700 10px var(--f); letter-spacing: .08em; }
+@media (prefers-reduced-motion: reduce) { #mapa path.c { transition: none; } }
+.leyenda { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--tinta-2); }
+.escala { display: flex; }
+.escala span { display: grid; gap: 3px; text-align: left; min-width: 46px; }
+.escala i { height: 8px; display: block; }
+.escala span:first-child i { border-radius: 3px 0 0 3px; }
+.escala span:last-child i { border-radius: 0 3px 3px 0; }
+.escala em { font-style: normal; font-size: 11px; color: var(--tinta-3); }
+.tabla { width: 100%; border-collapse: collapse; }
+.tabla thead th { position: sticky; top: 0; background: var(--papel); text-align: left; font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--tinta-3); padding: 16px 6px 8px; border-bottom: 2px solid var(--morado); z-index: 1; white-space: nowrap; }
+.tabla th:last-child, .tabla td:last-child { text-align: right; }
+.tabla td { padding: 9px 6px; border-bottom: 1px solid var(--linea); vertical-align: middle; }
+.tabla tr.f { cursor: pointer; }
+.tabla tr.f:hover td { background: var(--fondo); }
+.tabla tr.sel td { background: #fff6dc; }
+.tabla .n { width: 28px; color: var(--tinta-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tabla .nom { font-weight: 700; }
+.tabla .nom small { display: block; color: var(--tinta-3); font-weight: 400; font-size: 12px; }
+.tabla .bar { width: 34%; }
+.tabla .mm { font-weight: 900; font-size: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabla .mm small { font-weight: 700; font-size: 12px; color: var(--tinta-3); }
+.barrita { height: 8px; background: var(--sin); border-radius: 4px; overflow: hidden; }
+.barrita i { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
+.vacio { color: var(--tinta-3); padding: 18px 6px; }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--tinta); color: #fff; font-size: 13px; line-height: 1.4;
+  padding: 7px 10px; border-radius: 6px; max-width: 270px; box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+
+/* ---------- pie */
+.aviso { margin-top: 22px; border-left: 0; background: var(--ambar-f); color: var(--ambar); border-radius: 8px; padding: 12px 16px; font-size: 14px; }
+footer { padding-block: 30px 46px; color: var(--tinta-2); font-size: 13.5px; }
+footer .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px 32px; border-top: 1px solid var(--linea); padding-top: 22px; }
+footer h4 { font-weight: 800; font-size: 14px; color: var(--morado); margin: 0 0 6px; }
+footer p { margin: 0 0 6px; max-width: 62ch; }
+.fuentes { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--linea); background: var(--papel); white-space: nowrap; }
+.chip.viejo { background: var(--ambar-f); color: var(--ambar); border-color: transparent; }
+
+@media (max-width: 920px) {
+  .portada .envoltura { grid-template-columns: minmax(0, 1fr); gap: 30px; padding-block: 30px 56px; }
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .panel-mapa { border-right: 0; border-bottom: 1px solid var(--linea); }
+  .tabla-scroll { position: static; max-height: 560px; }
+  .respuestas { grid-template-columns: minmax(0, 1fr); }
+  .resp + .resp { border-left: 0; border-top: 1px solid var(--linea); }
+  .periodos { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 14px; }
+}
+@media (max-width: 480px) {
+  .institucional img { height: 36px; }
+  .cifra { grid-template-columns: 70px minmax(0, 1fr) auto; gap: 12px; }
+  .cifra .v { font-size: 36px; }
+  .resp, .ficha-cab, .cuando, details.hora { padding-left: 16px; padding-right: 16px; }
+  .tabla .bar { width: 26%; }
+  .portada::after { width: 200px; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-buscar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></g></symbol>
+  <symbol id="i-ubicar" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.6A2.6 2.6 0 1 1 12 6.4a2.6 2.6 0 0 1 0 5.2z"/></symbol>
+  <symbol id="i-enlace" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></g></symbol>
+  <symbol id="i-cerrar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="institucional">
+  <div class="envoltura">
+    <img src="img/gobierno-ecuador.png" alt="Gobierno del Ecuador" width="300" height="117" onerror="this.hidden=true">
+    <div class="act" id="act">Cargando datos</div>
+  </div>
+</div>
+
+<header class="portada">
+  <div class="envoltura">
+    <div>
+      <div class="cinta"><span>República del Ecuador</span></div>
+      <h1>Monitor Nacional de <em>Lluvias</em></h1>
+      <div class="busqueda">
+        <form class="campo" id="form-buscar" autocomplete="off" role="search">
+          <svg class="icono"><use href="#i-buscar"/></svg>
+          <input type="search" id="buscar" placeholder="Escriba su cantón" aria-label="Escriba su cantón">
+          <button type="submit">Consultar</button>
+        </form>
+        <ul class="sugerencias" id="sugerencias" hidden></ul>
+        <button class="ubicar" id="ubicar"><svg class="icono"><use href="#i-ubicar"/></svg>Usar mi ubicación</button>
+        <div class="mensaje" id="mensaje" aria-live="polite"></div>
+      </div>
+    </div>
+    <div>
+      <p class="pais-t">En el país</p>
+      <div class="cifras" id="cifras"></div>
+    </div>
+  </div>
+</header>
+
+<main class="envoltura">
+  <section class="ficha" id="ficha" hidden aria-live="polite"></section>
+
+  <div class="seccion-t">
+    <h2 id="seccion-titulo">Lluvia pronosticada</h2>
+    <div class="controles">
+      <div class="segmentos" role="group" aria-label="Qué mostrar" id="capas">
+        <button data-c="viene" aria-pressed="true">Va a llover</button>
+        <button data-c="ahora" aria-pressed="false">Está lloviendo</button>
+        <button data-c="cayo" aria-pressed="false">Ha llovido</button>
+      </div>
+      <div class="segmentos" role="group" aria-label="Horas" id="ventanas">
+        <button data-v="12" aria-pressed="false">12 h</button>
+        <button data-v="24" aria-pressed="true">24 h</button>
+        <button data-v="48" aria-pressed="false">48 h</button>
+      </div>
+      <select id="provincia" aria-label="Provincia"><option value="">Todas las provincias</option></select>
+    </div>
+  </div>
+
+  <div class="panel">
+    <section class="panel-mapa">
+      <p class="fuente-p" id="mapa-nota"></p>
+      <svg id="mapa" role="img" aria-label="Mapa de cantones coloreado por lluvia"></svg>
+      <div class="leyenda" id="leyenda"></div>
+    </section>
+    <section class="panel-tabla">
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th></th><th>Cantón</th><th></th><th id="th-mm">mm</th></tr></thead>
+          <tbody id="tabla"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <p class="aviso"><b>Pronóstico experimental.</b> No reemplaza las alertas oficiales del INAMHI ni de la Secretaría Nacional
+    de Gestión de Riesgos. Las cifras son promedios del cantón; en un mismo cantón la lluvia puede variar mucho.</p>
+</main>
+
+<footer class="envoltura">
+  <div class="cols">
+    <div>
+      <h4>Va a llover</h4>
+      <p>Pronóstico del INAMHI (modelo WRF, última corrida), promedio de las celdas de unos 3 km dentro de cada cantón.
+        El modelo del INAMHI no cubre Galápagos: allí se usa la mediana de las 51 corridas del modelo europeo ECMWF.</p>
+    </div>
+    <div>
+      <h4>Está lloviendo y ha llovido</h4>
+      <p>Lluvia estimada por satélite (PERSIANN-PDIR), cada hora. Es una estimación desde el espacio y puede quedarse corta
+        en la montaña.</p>
+    </div>
+    <div>
+      <h4>Palabras que usamos</h4>
+      <p>En 6 horas: ligera de 1 a 5 mm, moderada de 5 a 15 mm, fuerte de 15 mm en adelante. En una hora, se considera que
+        llueve desde 0,5 mm.</p>
+      <p>Límites cantonales: geoBoundaries (INEC, OCHA). La ubicación se usa solo en su dispositivo.</p>
+    </div>
+    <div>
+      <h4>Estado de las fuentes</h4>
+      <div class="fuentes" id="fuentes"></div>
+    </div>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+"use strict";
+const ZONA = "America/Guayaquil";
+const CLASES = {
+  acum: [[1, "1"], [10, "10"], [25, "25"], [50, "50 mm"]],
+  hora: [[0.5, "0,5"], [2.5, "2,5"], [7.6, "7,6"], [15, "15 mm"]],
+};
+const COLORES = ["var(--sin)", "var(--l1)", "var(--l2)", "var(--l3)", "var(--l4)"];
+const LLUEVE = 0.5;    // mm en una hora para decir que está lloviendo
+const FUERTE_24 = 25;  // mm en 24 h para contar un cantón con lluvia fuerte
+// Palabra para la lluvia de un periodo de 6 h.
+function palabra(v) {
+  if (v >= 15) return { t: "Fuerte", c: "fuerte", color: "var(--rojo)", fondo: "var(--rojo-f)" };
+  if (v >= 5) return { t: "Moderada", c: "moderada", color: "var(--ambar)", fondo: "var(--ambar-f)" };
+  if (v >= 1) return { t: "Ligera", c: "ligera", color: "var(--real)", fondo: "var(--azul-f)" };
+  return { t: "Sin lluvia", c: "nada", color: "var(--tinta-3)", fondo: "var(--gris-f)" };
+}
+function palabraHora(v) {
+  if (v >= 7.6) return "fuerte";
+  if (v >= 2.5) return "moderada";
+  return "ligera";
+}
+const est = { ventana: "24", capa: "viene", provincia: "", sel: null };
+let D = null, M = null, porId = {};
+
+const $ = (s) => document.querySelector(s);
+const fmtHora = new Intl.DateTimeFormat("es-EC", { timeZone: ZONA, hour: "2-digit", minute: "2-digit", hour12: false });
+const fmtDia = new Intl.DateTimeFormat("es-EC", { timeZone: ZONA, weekday: "long", day: "numeric", month: "long" });
+const fmtDiaCorto = new Intl.DateTimeFormat("es-EC", { timeZone: ZONA, weekday: "short", day: "numeric" });
+const fmtSem = new Intl.DateTimeFormat("es-EC", { timeZone: ZONA, weekday: "short" });
+const fmtFecha = new Intl.DateTimeFormat("en-CA", { timeZone: ZONA, year: "numeric", month: "2-digit", day: "2-digit" });
+const fmtH = new Intl.DateTimeFormat("en-GB", { timeZone: ZONA, hour: "2-digit", hour12: false });
+const hh = (d) => fmtHora.format(d).replace(":", "h");
+const hora = (iso) => new Date(iso);
+const H3 = 3 * 3.6e6;
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+function mm(v) {
+  if (v == null) return "—";
+  if (v < 1) return v < 0.1 ? "0" : "<1";
+  return Math.round(v).toLocaleString("es-EC");
+}
+function hace(iso) {
+  const min = Math.round((Date.now() - hora(iso)) / 60000);
+  if (min < 60) return `hace ${Math.max(min, 1)} min`;
+  const h = Math.round(min / 60);
+  return h < 48 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`;
+}
+function clase(v, tipo) { let k = 0; CLASES[tipo].forEach(([u], i) => { if (v >= u) k = i + 1; }); return k; }
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sinTildes = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+function guardar(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function leer(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+// ---------------------------------------------------------------- valores por cantón
+
+function pasosVentana() { return { 12: 4, 24: 8, 48: 16 }[est.ventana]; }
+function sumaPasos(id, n) {
+  const w = (D.cantones[id] || {}).wrf;
+  return w ? w.slice(0, Math.min(n, w.length)).reduce((a, b) => a + b, 0) : null;
+}
+function sat(id, k) { const s = (D.cantones[id] || {}).sat; return s ? s[k] : null; }
+function valorCapa(id) {
+  if (est.capa === "viene") return sumaPasos(id, pasosVentana());
+  if (est.capa === "ahora") return sat(id, "1h");
+  return sat(id, "24h");
+}
+
+// Periodos de 6 h con los pasos de 3 h que vienen.
+function periodos(id) {
+  const w = (D.cantones[id] || {}).wrf || [], hoy = fmtFecha.format(new Date());
+  const lista = [];
+  D.pasos.forEach((p, i) => {
+    if (i >= w.length) return;
+    const medio = new Date(hora(p) - H3 / 2), h = +fmtH.format(medio), dia = fmtFecha.format(medio);
+    const parte = h < 6 ? 0 : h < 12 ? 1 : h < 18 ? 2 : 3;
+    let m = lista[lista.length - 1];
+    if (!m || m.clave !== dia + parte) {
+      const momento = ["madrugada", "mañana", "tarde", "noche"][parte];
+      m = { clave: dia + parte, mm: 0, pasos: [], dia: dia === hoy ? "Hoy" : cap(fmtSem.format(medio)).replace(".", ""), momento,
+        frase: dia === hoy ? `hoy en la ${momento}` : `el ${fmtSem.format(medio).replace(".", "")} en la ${momento}` };
+      lista.push(m);
+    }
+    m.mm += w[i] || 0;
+    m.pasos.push(i);
+  });
+  return lista.slice(0, 8);
+}
+
+// ---------------------------------------------------------------- portada: tres cifras del país
+
+function pintarPortada() {
+  const ids = M.cantones.map((c) => c.id), f = D.fuentes;
+  const viene = ids.filter((id) => (sumaPasos(id, 8) || 0) >= FUERTE_24).length;
+  const ahora = ids.filter((id) => (sat(id, "1h") || 0) >= LLUEVE).length;
+  const cayo = ids.filter((id) => (sat(id, "24h") || 0) >= FUERTE_24).length;
+  const fila = (capa, v, titulo, detalle) => `<button class="cifra" data-c="${capa}">
+      <span class="v">${v}</span><span class="t"><b>${titulo}</b><span>${detalle}</span></span><span class="flecha" aria-hidden="true">→</span></button>`;
+  $("#cifras").innerHTML =
+    fila("viene", viene, "cantones con lluvia fuerte pronosticada", `${FUERTE_24} mm o más en las próximas 24 horas`) +
+    fila("ahora", f.satelite ? ahora : "—", "cantones donde está lloviendo", f.satelite ? `en la hora de las ${hh(hora(f.satelite.ultima_hora))}` : "sin dato del satélite") +
+    fila("cayo", f.satelite ? cayo : "—", "cantones con lluvia fuerte en 24 horas", `${FUERTE_24} mm o más en las últimas 24 horas`);
+}
+
+// ---------------------------------------------------------------- ficha del cantón: las tres preguntas
+
+function mostrar(id, desplazar) {
+  est.sel = id;
+  guardar("lluvia-canton", id);
+  const u = new URL(location.href); u.searchParams.set("canton", id); history.replaceState(null, "", u);
+  pintarFicha(); pintarMapa(); pintarTabla();
+  if (desplazar !== false) $("#ficha").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  avisarAltura();
+}
+
+function pintarFicha() {
+  const f = $("#ficha");
+  if (!est.sel) { f.hidden = true; return; }
+  const c = porId[est.sel], d = D.cantones[est.sel] || {};
+  const ps = periodos(est.sel), en24 = ps.filter((m) => m.pasos[0] < 8);
+  const mayor = en24.reduce((a, m) => (!a || m.mm > a.mm ? m : a), null);
+  const p24 = sumaPasos(est.sel, 8), P = palabra(mayor ? mayor.mm : 0);
+  const s = d.sat, ahora = s ? s["1h"] : null, llueve = ahora != null && ahora >= LLUEVE;
+  const fs = D.fuentes.satelite;
+  const tope = Math.max(10, ...ps.map((m) => m.mm));
+
+  const cuando = mayor && mayor.mm >= 1 ? `Lo más intenso, ${mayor.frase} (unos ${mm(mayor.mm)} mm).` : "No se pronostica lluvia importante.";
+  f.innerHTML = `
+    <div class="ficha-cab">
+      <div><div class="prov">${esc(c.provincia)} · ${esc(fmtDia.format(new Date()))}</div><h2>${esc(c.canton)}</h2></div>
+      <div class="botones">
+        <button class="boton" id="copiar"><svg class="icono"><use href="#i-enlace"/></svg><span>Copiar enlace</span></button>
+        <button class="boton" id="cerrar"><svg class="icono"><use href="#i-cerrar"/></svg>Cerrar</button>
+      </div>
+    </div>
+    <div class="respuestas">
+      <div class="resp">
+        <span class="q">¿Cuánto va a llover?</span>
+        <span class="v">${mm(p24)} <small>mm</small></span>
+        <span class="estado" style="color:${P.color};background:${P.fondo}"><i></i>${P.t === "Sin lluvia" ? "Sin lluvia importante" : `Lluvia ${P.t.toLowerCase()}`}</span>
+        <span class="d">${d.fuente === "ecmwf" ? "Pronóstico del modelo europeo ECMWF (el del INAMHI no cubre Galápagos)" : "Pronóstico del INAMHI"} para las próximas 24 horas. ${esc(cuando)}</span>
+      </div>
+      <div class="resp">
+        <span class="q">¿Cuánto ha llovido?</span>
+        <span class="v">${s ? mm(s["24h"]) : "—"} <small>mm</small></span>
+        <span class="d">${s ? `En las últimas 24 horas, estimado por satélite${fs ? ` hasta las ${hh(hora(fs.ultima_hora))}` : ""}.` : "Sin dato del satélite."}</span>
+      </div>
+      <div class="resp">
+        <span class="q">¿Está lloviendo?</span>
+        <span class="v texto">${ahora == null ? "Sin dato" : llueve ? "Sí" : "No"}</span>
+        ${ahora == null ? "" : llueve
+          ? `<span class="estado" style="color:var(--real);background:var(--azul-f)"><i></i>Lluvia ${palabraHora(ahora)}</span>`
+          : ""}
+        <span class="d">${ahora == null ? "" : llueve ? `${mm(ahora)} mm en la hora de las ${hh(hora(fs.ultima_hora))}, estimado por satélite.`
+          : `Sin lluvia en la hora de las ${hh(hora(fs.ultima_hora))}, según el satélite.`}</span>
+      </div>
+    </div>
+    <div class="cuando">
+      <p class="cuando-t">Cuándo va a llover · mm cada 6 horas</p>
+      <div class="periodos">${ps.map((m) => { const q = palabra(m.mm); return `
+        <div class="periodo ${q.c}" title="${esc(`${m.dia}, ${m.momento}: ${mm(m.mm)} mm`)}">
+          <span class="mm">${mm(m.mm)}</span>
+          <span class="col"><i style="height:${Math.max(2, (m.mm / tope) * 64)}px"></i></span>
+          <span class="n">${esc(m.dia)}<br>${esc(m.momento)}</span>
+        </div>`; }).join("")}</div>
+    </div>
+    <details class="hora"><summary>Ver hora por hora</summary><svg id="grafico" role="img" aria-label="Lluvia pronosticada cada 3 horas"></svg></details>`;
+  f.hidden = false;
+  $("#cerrar").onclick = () => {
+    est.sel = null; f.hidden = true;
+    const u = new URL(location.href); u.searchParams.delete("canton"); history.replaceState(null, "", u);
+    guardar("lluvia-canton", "");
+    pintarMapa(); pintarTabla(); avisarAltura();
+  };
+  $("#copiar").onclick = async () => {
+    const t = $("#copiar span");
+    try { await navigator.clipboard.writeText(location.href); t.textContent = "Enlace copiado"; }
+    catch (e) { t.textContent = location.href; }
+  };
+  $("details.hora").addEventListener("toggle", avisarAltura);
+  graficoPasos(d);
+}
+
+function graficoPasos(d) {
+  const svg = $("#grafico"), w = d.wrf || [];
+  const N = D.pasos.length, A = 760, H = 190, iz = 30, de = 6, ar = 22, ab = 34;
+  const tope = Math.max(5, ...w);
+  const paso = Math.pow(10, Math.floor(Math.log10(tope)));
+  const unidad = tope / paso > 5 ? paso * 2 : tope / paso > 2 ? paso : paso / 2;
+  const techo = Math.ceil(tope / unidad) * unidad;
+  const y = (v) => ar + (H - ar - ab) * (1 - v / techo), ancho = (A - iz - de) / N;
+  let s = "";
+  for (let v = 0; v <= techo + 1e-9; v += unidad) s += `<line class="eje" x1="${iz}" x2="${A - de}" y1="${y(v)}" y2="${y(v)}"/><text x="${iz - 6}" y="${y(v) + 4}" text-anchor="end">${+v.toFixed(1)}</text>`;
+  let diaPrevio = null;
+  D.pasos.forEach((p, i) => {
+    const fin = hora(p), ini = new Date(fin - H3), x = iz + i * ancho, dia = fmtDiaCorto.format(ini);
+    if (dia !== diaPrevio) {
+      if (i > 0) s += `<line class="dia" x1="${x}" x2="${x}" y1="${ar - 14}" y2="${H - ab + 20}"/>`;
+      s += `<text x="${x + 4}" y="${ar - 10}">${dia}</text>`;
+      diaPrevio = dia;
+    }
+    if (i % 2 === 0) s += `<text x="${x + ancho / 2}" y="${H - ab + 16}" text-anchor="middle">${hh(ini)}</text>`;
+    const v = w[i] || 0, bh = Math.max(v > 0 ? 2 : 0, y(0) - y(v));
+    const tip = `${hh(ini)} a ${hh(fin)} · ${fmtDia.format(ini)}<br><b>${mm(v)} mm</b> (${d.fuente === "ecmwf" ? "ECMWF" : "INAMHI"})`;
+    s += `<g data-tip="${esc(tip)}"><rect class="hit" x="${x}" y="${ar}" width="${ancho}" height="${H - ar - ab}"/>` +
+      `<path class="b" d="${barra(x + ancho * 0.2, y(0) - bh, ancho * 0.6, bh)}"/></g>`;
+  });
+  s += `<text x="${iz - 6}" y="${ar - 10}" text-anchor="end">mm</text>`;
+  svg.setAttribute("viewBox", `0 0 ${A} ${H}`);
+  svg.innerHTML = s;
+  svg.querySelectorAll("g[data-tip]").forEach((g) => {
+    g.addEventListener("mousemove", (e) => mostrarTip(e, g.dataset.tip));
+    g.addEventListener("mouseleave", ocultarTip);
+    g.addEventListener("click", (e) => mostrarTip(e, g.dataset.tip));
+  });
+}
+
+function barra(x, y, w, h) {
+  if (h <= 0) return "";
+  const r = Math.min(3, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+
+// ---------------------------------------------------------------- buscar y ubicar
+
+let hallados = [], activo = 0;
+function sugerir() {
+  const q = sinTildes($("#buscar").value.trim()), ul = $("#sugerencias");
+  hallados = q ? M.cantones.filter((c) => c.nq.includes(q))
+    .sort((a, b) => (b.nq.startsWith(q) - a.nq.startsWith(q)) || a.canton.localeCompare(b.canton, "es")).slice(0, 6) : [];
+  activo = 0;
+  ul.innerHTML = hallados.map((c, i) => `<li data-id="${c.id}" role="option"${i === 0 ? ' class="activa"' : ""}><span>${esc(c.canton)}</span><small>${esc(c.provincia)}</small></li>`).join("");
+  ul.hidden = !hallados.length;
+}
+function elegir(id) { $("#sugerencias").hidden = true; $("#buscar").value = porId[id].canton; $("#mensaje").textContent = ""; mostrar(id); }
+
+function ubicar() {
+  const msj = $("#mensaje");
+  if (!navigator.geolocation) { msj.textContent = "Su navegador no permite obtener la ubicación. Escriba su cantón."; return; }
+  msj.textContent = "Obteniendo ubicación…";
+  navigator.geolocation.getCurrentPosition((p) => {
+    const lon = p.coords.longitude, lat = p.coords.latitude, g = M.galapagos;
+    const pt = g && lon < -85  // Galápagos va en un recuadro con otra escala
+      ? new DOMPoint(g.x + (lon - g.oeste) * g.escala, g.y + (g.norte - lat) * g.escala)
+      : new DOMPoint((lon - M.oeste) * 100, (M.norte - lat) * 100);
+    let id = null;
+    for (const el of document.querySelectorAll("#mapa path.c")) {
+      try { if (el.isPointInFill(pt)) { id = el.dataset.id; break; } } catch (e) { break; }
+    }
+    if (!id) { msj.textContent = "Su ubicación está fuera del Ecuador. Escriba su cantón."; return; }
+    msj.textContent = "";
+    mostrar(id);
+  }, () => { msj.textContent = "No se pudo obtener la ubicación. Escriba su cantón."; }, { timeout: 15000, maximumAge: 600000 });
+}
+
+// ---------------------------------------------------------------- mapa y tabla (siempre la misma variable)
+
+const CAPAS = {
+  viene: { titulo: () => `Lluvia pronosticada en las próximas ${est.ventana} horas`, tipo: "acum",
+    nota: () => "Pronóstico del INAMHI; Galápagos, modelo ECMWF · promedio del cantón", mm: () => `mm ${est.ventana} h`,
+    vacio: "No se pronostica lluvia en esta selección.", minimo: 1 },
+  ahora: { titulo: () => "Dónde está lloviendo", tipo: "hora",
+    nota: () => D.fuentes.satelite ? `Estimado por satélite · hora de las ${hh(hora(D.fuentes.satelite.ultima_hora))}` : "Sin dato del satélite",
+    mm: () => "mm 1 h", vacio: "El satélite no registra lluvia en esta selección.", minimo: LLUEVE },
+  cayo: { titulo: () => "Cuánto ha llovido en 24 horas", tipo: "acum",
+    nota: () => D.fuentes.satelite ? `Estimado por satélite · 24 horas hasta las ${hh(hora(D.fuentes.satelite.ultima_hora))}` : "Sin dato del satélite",
+    mm: () => "mm 24 h", vacio: "El satélite no registra lluvia en esta selección.", minimo: 1 },
+};
+
+function cajaDe(cantones) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  cantones.forEach((c) => { const b = c.caja; x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); });
+  const m = Math.max(x1 - x0, y1 - y0) * 0.06 + 4;
+  return [x0 - m, y0 - m, x1 - x0 + 2 * m, y1 - y0 + 2 * m];
+}
+
+function armarMapa() {
+  const svg = $("#mapa");
+  svg.setAttribute("viewBox", M.vista.join(" "));
+  svg.innerHTML = M.cantones.map((c) => `<path class="c" data-id="${c.id}" d="${c.d}"/>`).join("") +
+    M.provincias.map((p) => `<path class="p" d="${p.d}"/>`).join("") +
+    (M.galapagos ? `<rect class="recuadro" x="${M.galapagos.caja[0]}" y="${M.galapagos.caja[1]}" width="${M.galapagos.caja[2]}" height="${M.galapagos.caja[3]}" rx="4"/>` +
+      `<text class="recuadro-t" x="${M.galapagos.caja[0]}" y="${M.galapagos.caja[1] + M.galapagos.caja[3] + 13}">GALÁPAGOS</text>` : "");
+  svg.addEventListener("click", (e) => { const id = e.target.dataset && e.target.dataset.id; if (id) mostrar(id); });
+  svg.addEventListener("mousemove", (e) => {
+    const id = e.target.dataset && e.target.dataset.id;
+    if (!id) return ocultarTip();
+    const c = porId[id];
+    mostrarTip(e, `<b>${esc(c.canton)}</b> · ${esc(c.provincia)}<br>${mm(valorCapa(id))} ${CAPAS[est.capa].mm()}`);
+  });
+  svg.addEventListener("mouseleave", ocultarTip);
+}
+
+function pintarMapa() {
+  const K = CAPAS[est.capa];
+  document.querySelectorAll("#mapa path.c").forEach((p) => {
+    const id = p.dataset.id, v = valorCapa(id), c = porId[id];
+    p.style.fill = v == null ? "var(--sin)" : COLORES[clase(v, K.tipo)];
+    p.style.opacity = est.provincia && c.provincia !== est.provincia ? 0.22 : 1;
+    p.classList.toggle("sel", id === est.sel);
+  });
+  const sel = document.querySelector("#mapa path.c.sel");
+  if (sel) sel.parentNode.insertBefore(sel, document.querySelector("#mapa path.p"));
+  $("#mapa").setAttribute("viewBox", (est.provincia ? cajaDe(M.cantones.filter((c) => c.provincia === est.provincia)) : M.vista).join(" "));
+  $("#mapa-nota").textContent = K.nota();
+  $("#seccion-titulo").textContent = K.titulo();
+  $("#ventanas").hidden = est.capa !== "viene";
+  document.querySelectorAll("#capas button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.c === est.capa));
+  const escala = [`<span><i style="background:var(--sin)"></i><em>0</em></span>`]
+    .concat(CLASES[K.tipo].map(([, txt], i) => `<span><i style="background:${COLORES[i + 1]}"></i><em>${txt}</em></span>`));
+  $("#leyenda").innerHTML = `<span class="escala">${escala.join("")}</span>`;
+}
+
+function pintarTabla() {
+  const K = CAPAS[est.capa];
+  const filas = M.cantones.filter((c) => !est.provincia || c.provincia === est.provincia)
+    .map((c) => ({ c, v: valorCapa(c.id) })).sort((a, b) => (b.v ?? -1) - (a.v ?? -1));
+  const vis = est.provincia ? filas : filas.filter((x) => (x.v || 0) >= K.minimo);
+  const tope = Math.max(K.tipo === "hora" ? 2 : 10, ...vis.map((x) => x.v || 0));
+  $("#th-mm").textContent = K.mm();
+  $("#tabla").innerHTML = vis.length ? vis.map((x, i) => `
+    <tr class="f${x.c.id === est.sel ? " sel" : ""}" data-id="${x.c.id}" tabindex="0">
+      <td class="n">${i + 1}</td>
+      <td class="nom">${esc(x.c.canton)}<small>${esc(x.c.provincia)}</small></td>
+      <td class="bar"><div class="barrita"><i style="width:${Math.min(100, ((x.v || 0) / tope) * 100).toFixed(1)}%;background:${COLORES[Math.max(1, clase(x.v || 0, K.tipo))]}"></i></div></td>
+      <td class="mm">${mm(x.v)}</td></tr>`).join("") : `<tr><td colspan="4" class="vacio">${K.vacio}</td></tr>`;
+  $(".tabla-scroll").scrollTop = 0;
+}
+
+function irACapa(c) {
+  est.capa = c;
+  pintarMapa(); pintarTabla(); avisarAltura();
+}
+
+// ---------------------------------------------------------------- globito
+
+function mostrarTip(e, html) {
+  const t = $("#tip");
+  t.innerHTML = html;
+  t.hidden = false;
+  const w = t.offsetWidth, h = t.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  t.style.left = Math.max(8, x) + "px";
+  t.style.top = Math.max(8, y) + "px";
+}
+function ocultarTip() { $("#tip").hidden = true; }
+
+// ---------------------------------------------------------------- fuentes y arranque
+
+function pintarFuentes() {
+  const f = D.fuentes, chips = [];
+  const chip = (txt, iso, limiteH) => {
+    const viejo = !iso || (Date.now() - hora(iso)) / 3.6e6 > limiteH;
+    chips.push(`<span class="chip${viejo ? " viejo" : ""}">${txt}${viejo && iso ? ` · dato ${hace(iso)}` : ""}</span>`);
+  };
+  if (f.wrf) chip(`Pronóstico INAMHI · corrida ${fmtDiaCorto.format(hora(f.wrf.corrida))} ${hh(hora(f.wrf.corrida))}`, f.wrf.actualizado, 3);
+  if (f.satelite) chip(`Satélite · ${hh(hora(f.satelite.ultima_hora))}`, f.satelite.actualizado, 3);
+  if (f.pluviometros) chip(`Pluviómetros · ${f.pluviometros.con_dato} estaciones`, f.pluviometros.actualizado, 3);
+  $("#fuentes").innerHTML = chips.join("");
+  const g = hora(D.generado);
+  $("#act").innerHTML = `Actualizado<br><b>${esc(fmtDiaCorto.format(g))} · ${hh(g)}</b>`;
+}
+
+function pintarTodo() {
+  pintarFuentes(); pintarPortada(); pintarMapa(); pintarTabla();
+  if (est.sel) pintarFicha();
+  avisarAltura();
+}
+
+function avisarAltura() {  // incrustada con iframe: avisa su alto a la página que la contiene
+  if (parent !== window) requestAnimationFrame(() => parent.postMessage({ lluviaEcuadorAlto: document.documentElement.scrollHeight }, "*"));
+}
+
+async function cargarDatos() {
+  const r = await fetch("datos.json?t=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error("datos " + r.status);
+  D = await r.json();
+}
+
+async function iniciar() {
+  try {
+    const [m] = await Promise.all([fetch("mapa.json").then((r) => r.json()), cargarDatos()]);
+    M = m;
+  } catch (e) {
+    $("#act").textContent = "No se pudieron cargar los datos. Intente de nuevo en unos minutos.";
+    return;
+  }
+  M.cantones.forEach((c) => {
+    c.id = String(c.id);
+    c.nq = sinTildes(c.canton);
+    const n = c.d.match(/-?\d+(\.\d+)?/g).map(Number);
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (let i = 0; i + 1 < n.length; i += 2) { x0 = Math.min(x0, n[i]); x1 = Math.max(x1, n[i]); y0 = Math.min(y0, n[i + 1]); y1 = Math.max(y1, n[i + 1]); }
+    c.caja = [x0, y0, x1, y1];
+    porId[c.id] = c;
+  });
+  [...new Set(M.cantones.map((c) => c.provincia))].sort((a, b) => a.localeCompare(b, "es"))
+    .forEach((p) => $("#provincia").insertAdjacentHTML("beforeend", `<option>${esc(p)}</option>`));
+  armarMapa();
+
+  $("#ubicar").addEventListener("click", ubicar);
+  $("#buscar").addEventListener("input", sugerir);
+  $("#buscar").addEventListener("keydown", (e) => {
+    if (!hallados.length || !["ArrowDown", "ArrowUp"].includes(e.key)) return;
+    e.preventDefault();
+    activo = (activo + (e.key === "ArrowDown" ? 1 : hallados.length - 1)) % hallados.length;
+    document.querySelectorAll("#sugerencias li").forEach((li, i) => li.classList.toggle("activa", i === activo));
+  });
+  $("#form-buscar").addEventListener("submit", (e) => {
+    e.preventDefault(); sugerir();
+    if (hallados.length) elegir(hallados[activo].id); else $("#mensaje").textContent = "No hay un cantón con ese nombre.";
+  });
+  $("#sugerencias").addEventListener("click", (e) => { const li = e.target.closest("li[data-id]"); if (li) elegir(li.dataset.id); });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".busqueda")) $("#sugerencias").hidden = true; });
+  $("#cifras").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-c]"); if (!b) return;
+    irACapa(b.dataset.c);
+    $(".seccion-t").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  });
+  $("#capas").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) irACapa(b.dataset.c); });
+  $("#ventanas").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    est.ventana = b.dataset.v;
+    document.querySelectorAll("#ventanas button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    pintarMapa(); pintarTabla(); avisarAltura();
+  });
+  $("#provincia").addEventListener("change", (e) => { est.provincia = e.target.value; pintarMapa(); pintarTabla(); avisarAltura(); });
+  $("#tabla").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) mostrar(tr.dataset.id); });
+  $("#tabla").addEventListener("keydown", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); mostrar(tr.dataset.id); } });
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("provincia")) { est.provincia = params.get("provincia"); $("#provincia").value = est.provincia; }
+  const inicial = params.get("canton") || leer("lluvia-canton");
+  if (inicial && porId[inicial]) est.sel = inicial;
+  pintarTodo();
+  setInterval(() => cargarDatos().then(pintarTodo).catch(() => {}), 15 * 60 * 1000);
+}
+iniciar();
+</script>
+</body>
+</html>

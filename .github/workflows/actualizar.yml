@@ -1,0 +1,67 @@
+name: Actualizar lluvia
+on:
+  schedule:
+    - cron: "25 * * * *"   # cada hora; el satélite y el WRF ya publicaron la hora anterior
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: actualizar
+  cancel-in-progress: false
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HAY_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.publicar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      # Lee la memoria de la página publicada (URL_PUBLICADA). Si no la puede leer, no publica: así nunca se
+      # reemplaza una página buena por una vacía.
+      - name: Generar datos
+        run: python3 generar.py
+        env:
+          URL_PUBLICADA: ${{ vars.URL_PUBLICADA }}
+          PLUVIOMETROS: ${{ vars.PLUVIOMETROS }}
+      # El logo del Gobierno no va en el repositorio: se arma desde el secreto LOGO_GOBIERNO_B64 (PNG en base64).
+      # Sin el secreto, la página se publica sin logo.
+      - name: Logo del Gobierno
+        env:
+          LOGO: ${{ secrets.LOGO_GOBIERNO_B64 }}
+        run: |
+          if [ -n "$LOGO" ]; then mkdir -p public/img && printf '%s' "$LOGO" | base64 -d > public/img/gobierno-ecuador.png; fi
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: public }
+      - id: publicar
+        uses: actions/deploy-pages@v4
+      # Copia en Cloudflare Pages, solo si ya se cargaron sus claves (Settings -> Secrets and variables).
+      - name: Publicar en Cloudflare Pages
+        if: env.HAY_CLOUDFLARE == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.148.0 pages deploy public --project-name="${{ vars.CF_PROYECTO || 'lluvia-ecuador' }}" --branch=main
+      # GitHub apaga los horarios de un repositorio sin movimiento en 60 días: un commit chico cada lunes lo evita.
+      - name: Mantener vivo el horario
+        if: github.event_name == 'schedule'
+        run: |
+          if [ "$(date -u +%u%H)" = "106" ]; then
+            date -u +%FT%TZ > .ultimo-latido
+            git config user.name "lluvia-ecuador[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .ultimo-latido && git commit -m "Latido semanal" && git push
+          fi
+      # Si una fuente lleva horas sin renovarse, la corrida queda en rojo y GitHub manda correo.
+      - name: Revisar fuentes
+        run: |
+          cat errores.json
+          if [ -s avisos.txt ]; then echo "Fuentes sin renovar:"; cat avisos.txt; exit 1; fi
