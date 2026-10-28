@@ -42,7 +42,7 @@ cd public && python3 -m http.server 8777   # y abrir http://127.0.0.1:8777
 
 ```html
 <iframe id="lluvia" src="https://DIRECCION-DE-LA-PAGINA/" style="width:100%;border:0;height:1900px"
-        title="Lluvia por cantón" loading="lazy" allow="geolocation"></iframe>
+        title="Lluvia por cantón" loading="lazy"></iframe>
 <script>
   addEventListener("message", (e) => {
     if (e.data && e.data.lluviaEcuadorAlto) document.getElementById("lluvia").style.height = e.data.lluviaEcuadorAlto + "px";
@@ -51,7 +51,6 @@ cd public && python3 -m http.server 8777   # y abrir http://127.0.0.1:8777
 ```
 
 Se puede abrir filtrada por provincia (`?provincia=Guayas`) o directo en un cantón (`?canton=14`).
-`allow="geolocation"` deja que el botón "Usar mi ubicación" funcione dentro del iframe.
 
 ## Logo del Gobierno
 
